@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>城市旅行地图 · 徐州 / 大连</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232A271F'/%3E%3Ctext x='32' y='42' font-size='24' text-anchor='middle' fill='%23F6F0E3' font-family='serif'%3E旅%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --paper:#F6F0E3; --paper2:#EDE4CF; --ink:#2A271F; --sub:#6F6755; --line:#DCD2BC;
+  --d1:#B0493A; --d2:#3F6B57; --gold:#A9843C; --sea:#2E5F8A;
+  --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;line-height:1.6}
+::selection{background:rgba(63,107,87,.2)}
+.wrap{max-width:920px;width:100%;text-align:center}
+.badge{display:inline-block;border:1px solid var(--line);background:var(--paper2);border-radius:999px;padding:5px 16px;font-size:12.5px;color:var(--sub);letter-spacing:.08em;margin-bottom:22px}
+h1{font-family:var(--serif);font-weight:900;font-size:clamp(32px,5vw,52px);letter-spacing:.14em}
+h1 em{font-style:normal;color:var(--d1)}
+.sub{margin-top:12px;color:var(--sub);font-size:15px;letter-spacing:.05em}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:42px}
+.city{display:block;text-decoration:none;color:inherit;background:var(--paper2);border:1px solid var(--line);border-radius:18px;padding:30px 26px;text-align:left;transition:all .22s;box-shadow:0 8px 24px rgba(42,39,31,.08)}
+.city:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(42,39,31,.16)}
+.city .big{font-family:var(--serif);font-weight:900;font-size:44px;line-height:1}
+.city.xz .big{color:var(--d1)} .city.dl .big{color:var(--sea)}
+.city h2{font-family:var(--serif);font-weight:700;font-size:20px;margin:16px 0 8px;letter-spacing:.06em}
+.city p{font-size:13.5px;color:var(--sub)}
+.city .go{margin-top:18px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.city.xz .go{color:var(--d1)} .city.dl .go{color:var(--sea)}
+footer{margin-top:46px;color:var(--sub);font-size:12px}
+@media (max-width:640px){ .cards{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge">城市旅行地图 · 地图上的景点指南</span>
+  <h1>旅行 <em>地图集</em></h1>
+  <p class="sub">点击下方城市，在地图上定位景点、查看简介与门票信息</p>
+  <div class="cards">
+    <a class="city xz" href="xuzhou.html">
+      <div class="big">徐</div>
+      <h2>徐州 · 两日行</h2>
+      <p>两汉文化与云龙夜演，两日行程 + 14 个点位，地铁 2/3 号线与打车串联。</p>
+      <span class="go">打开徐州版 →</span>
+    </a>
+    <a class="city dl" href="dalian.html">
+      <div class="big">连</div>
+      <h2>大连 · 景点地图</h2>
+      <p>市区滨海、老城街区、旅顺与金石滩 31 个主要景点，标注门票与预约要求，附口碑推荐星级。</p>
+      <span class="go">打开大连版 →</span>
+    </a>
+  </div>
+</div>
+<footer>地图底图 © 高德地图（已配置 key）· 备用源 © OpenStreetMap · © Esri</footer>
+</body>
+</html>
