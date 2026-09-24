@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大连 · 景点地图</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%233F6B57'/%3E%3Ctext x='32' y='42' font-size='28' text-anchor='middle' fill='%23F6F0E3' font-family='serif'%3E连%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css">
+<link rel="stylesheet" href="assets/leaflet/MarkerCluster.css">
+<link rel="stylesheet" href="assets/leaflet/MarkerCluster.Default.css">
+<style>
+/* ===== Token ===== */
+:root{
+  --paper:#F2F3EE; --paper2:#E7EADF; --ink:#23251F; --sub:#67695F;
+  --line:#D8DCC9; --free:#3F6B57; --paid:#B0493A; --reserve:#A9843C; --dark:#22201A;
+  --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --shadow:0 10px 30px rgba(35,37,31,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.6}
+::selection{background:rgba(63,107,87,.22)}
+:focus-visible{outline:2px solid var(--free);outline-offset:2px}
+
+/* ===== Header ===== */
+.site-header{position:sticky;top:0;z-index:600;background:rgba(242,243,238,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.header-in{max-width:1440px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-weight:700;font-size:19px;letter-spacing:.04em}
+.brand .seal{width:34px;height:34px;border-radius:8px;background:#2E5F8A;color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:17px}
+.brand .back{font-size:12px;color:var(--sub);font-weight:400;margin-left:6px;text-decoration:none;border-bottom:1px dashed var(--sub)}
+.brand .back:hover{color:var(--paid)}
+.filter{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.fbtn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:500 13px/1 var(--sans);padding:7px 14px;border-radius:999px;cursor:pointer;transition:all .18s}
+.fbtn:hover{border-color:var(--free);color:var(--free)}
+.fbtn.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* ===== Hero ===== */
+.hero{max-width:1440px;margin:0 auto;padding:44px 22px 26px;text-align:center;position:relative}
+.hero .wave{width:84px;height:22px;margin:0 auto 14px;opacity:.8}
+.hero h1{font-family:var(--serif);font-weight:900;font-size:clamp(34px,5vw,58px);letter-spacing:.12em}
+.hero h1 em{font-style:normal;color:#2E5F8A}
+.hero .sub{margin-top:12px;color:var(--sub);font-size:15px;letter-spacing:.06em}
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.chip{border:1px solid var(--line);background:var(--paper2);border-radius:999px;padding:6px 16px;font-size:13px;color:var(--ink)}
+.chip b{font-weight:700;color:var(--free)}
+.chip.hl b{color:var(--paid)}
+
+/* ===== Layout ===== */
+.layout{max-width:1440px;margin:0 auto;padding:10px 22px 0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,1fr);gap:22px;align-items:start}
+.map-col{position:sticky;top:66px;height:calc(100vh - 86px);min-height:520px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)}
+#map{width:100%;height:100%;background:#E4E7DA}
+.map-title{position:absolute;top:12px;left:12px;z-index:500;background:rgba(242,243,238,.95);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-family:var(--serif);font-weight:700;font-size:14px;letter-spacing:.05em;box-shadow:0 4px 12px rgba(35,37,31,.12)}
+.map-hint{position:absolute;bottom:34px;right:12px;z-index:500;background:rgba(242,243,238,.95);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--sub)}
+.map-legend{position:absolute;bottom:12px;left:12px;z-index:500;background:rgba(242,243,238,.95);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:12px;color:var(--ink);display:flex;gap:14px;box-shadow:0 4px 12px rgba(35,37,31,.12)}
+.map-legend span{display:flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.dot.free{background:var(--free)} .dot.paid{background:var(--paid)} .dot.reserve{background:var(--reserve)}
+
+/* ===== 聚合 ===== */
+.marker-cluster{background-clip:padding-box;border-radius:20px}
+.marker-cluster div{width:30px;height:30px;margin-left:5px;margin-top:5px;text-align:center;border-radius:50%;background:var(--ink);color:var(--paper);font:700 13px/30px var(--sans);border:2px solid rgba(255,255,255,.9);box-shadow:0 2px 6px rgba(35,37,31,.3)}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:var(--reserve)}
+
+/* ===== Leaflet overrides ===== */
+.leaflet-container{font-family:var(--sans)}
+.leaflet-control-zoom a{color:var(--ink)!important}
+.spot-popup .leaflet-popup-content-wrapper{border-radius:12px;background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow)}
+.spot-popup .leaflet-popup-content{margin:14px 16px;line-height:1.6}
+.spot-popup .leaflet-popup-tip{background:var(--paper);border:1px solid var(--line)}
+.pp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.pp-name{font-family:var(--serif);font-weight:700;font-size:17px}
+.pp-rating{font-size:12px;color:var(--reserve);font-weight:700;letter-spacing:.02em;margin-left:auto}
+.pp-tag{font-size:11px;padding:2px 9px;border-radius:999px;color:#fff}
+.pp-tag.free{background:var(--free)} .pp-tag.paid{background:var(--paid)} .pp-tag.reserve{background:var(--reserve)}
+.pp-ticket{font-size:12.5px;margin-bottom:6px;display:flex;gap:6px;align-items:flex-start;font-weight:700}
+.pp-ticket.free{color:var(--free)} .pp-ticket.paid{color:var(--paid)} .pp-ticket.reserve{color:var(--reserve)}
+.pp-transport{font-size:12.5px;color:#2E5F8A;margin-bottom:6px;display:flex;gap:6px;align-items:flex-start}
+.pp-desc{font-size:13px;color:var(--sub)}
+.pp-num{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:11px;font-weight:700;margin-right:2px}
+
+/* ===== Pin markers ===== */
+.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(35,37,31,.35);border:2px solid rgba(255,255,255,.85)}
+.pin.free{background:var(--free)} .pin.paid{background:var(--paid)} .pin.reserve{background:var(--reserve)} .pin.dark{background:var(--ink)}
+.pin span{transform:rotate(45deg);color:#fff;font:700 13px/1 var(--sans)}
+.pin:hover{transform:rotate(-45deg) scale(1.08)}
+.pin.active{outline:3px solid var(--reserve);outline-offset:2px}
+
+/* ===== Plan column ===== */
+.plan-col{min-width:0}
+.plan-head{display:flex;align-items:baseline;gap:12px;margin:6px 0 4px}
+.plan-head h2{font-family:var(--serif);font-weight:700;font-size:22px;letter-spacing:.06em}
+.plan-head p{font-size:12.5px;color:var(--sub)}
+.group-block{margin-top:18px}
+.group-title{display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:2px solid var(--ink);margin-bottom:4px}
+.group-title .gnum{font-family:var(--serif);font-weight:900;font-size:20px;color:#2E5F8A}
+.group-title .glabel{font-family:var(--serif);font-weight:700;font-size:16px}
+.group-title .gmeta{margin-left:auto;font-size:12.5px;color:var(--sub)}
+.card{background:var(--paper2);border:1px solid var(--line);border-left:4px solid var(--free);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:all .18s}
+.card.paid{border-left-color:var(--paid)}
+.card.reserve{border-left-color:var(--reserve)}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.card.active{outline:2px solid var(--reserve);outline-offset:1px;background:#FBF9EF}
+.card-head{display:flex;align-items:center;gap:8px}
+.card-head .cnum{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:12px;font-weight:700}
+.card-head .cname{font-family:var(--serif);font-weight:700;font-size:15.5px}
+.card-head .crating{font-size:12.5px;color:var(--reserve);font-weight:700;margin-left:8px;white-space:nowrap}
+.card-head .ctime{margin-left:auto;font-size:12px;color:var(--sub);white-space:nowrap}
+.card .cticket{font-size:12.5px;font-weight:700;margin:5px 0 3px}
+.card .cticket.free{color:var(--free)} .card .cticket.paid{color:var(--paid)} .card .cticket.reserve{color:var(--reserve)}
+.card .ctransport{font-size:12.5px;color:#2E5F8A;margin:0 0 3px}
+.card .cdesc{font-size:13px;color:var(--sub)}
+.card .cmap{margin-top:8px;font-size:12px;color:var(--reserve);font-weight:700}
+
+/* ===== Footer ===== */
+footer{max-width:1440px;margin:30px auto 0;padding:20px 22px 34px;border-top:1px solid var(--line);color:var(--sub);font-size:12px;text-align:center}
+footer a{color:var(--free)}
+
+@media (max-width:960px){
+  .layout{grid-template-columns:1fr}
+  .map-col{position:sticky;top:60px;height:58vh;min-height:420px}
+}
+@media (max-width:520px){
+  .header-in{padding:8px 14px}
+  .brand{font-size:16px}
+  .filter{width:100%;justify-content:flex-start;order:3}
+  .hero{padding:30px 14px 18px}
+  .map-col{top:108px;height:52vh}
+  .map-hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-in">
+    <div class="brand"><span class="seal">连</span>大连 · 景点地图</div>
+    <div class="filter" role="group" aria-label="按区域筛选">
+      <button class="fbtn active" data-group="all">全部</button>
+      <button class="fbtn" data-group="city">市区 · 滨海</button>
+      <button class="fbtn" data-group="oldcity">老城 · 街区</button>
+      <button class="fbtn" data-group="lvshun">旅顺</button>
+      <button class="fbtn" data-group="jinshitan">金石滩</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <svg class="wave" viewBox="0 0 84 22" aria-hidden="true"><path d="M4 14c6-6 12-6 18 0s12 6 18 0 12-6 18 0 12 6 18 0" stroke="#2E5F8A" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+  <h1>山海之城 · <em>大连</em></h1>
+  <p class="sub">滨海路、老虎滩、旅顺与金石滩——一座城的山海与近代史</p>
+  <div class="chips">
+    <span class="chip"><b>31</b> 个点位 · 地图可点</span>
+    <span class="chip hl"><b>收费</b> 景点已标注票价</span>
+    <span class="chip"><b>博物馆需预约</b> 记得提前约</span>
+    <span class="chip"><b>星级</b> 为口碑综合推荐（5 分制）</span>
+  </div>
+</section>
+
+<main class="layout">
+  <aside class="map-col">
+    <div class="map-title">大连 · 景点地图</div>
+    <div id="map"></div>
+    <div class="map-hint">点击地图上的编号点位，查看景点与门票信息</div>
+    <div class="map-legend">
+      <span><i class="dot free"></i>免费</span>
+      <span><i class="dot paid"></i>收费</span>
+      <span><i class="dot reserve"></i>免费 · 需预约</span>
+    </div>
+  </aside>
+
+  <section class="plan-col">
+    <div class="plan-head"><h2>景点清单</h2><p>点击卡片可在地图上定位；点击地图点位查看详情</p></div>
+    <div id="plan"></div>
+  </section>
+</main>
+
+<footer>
+  <p>门票价格与预约要求、景点星级均为公开信息整理（星级为口碑综合推荐，满分 5 星），仅供参考，请以景区当日公示为准；景点坐标为 OpenStreetMap / 公开地图数据。<br>
+  地图底图 © <a href="https://www.amap.com/" target="_blank" rel="noopener">高德地图</a>（已配置 key，最大 18 级清晰显示）；备用源 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · © <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>，联网加载、自动切换。</p>
+</footer>
+
+<script src="assets/leaflet/leaflet.js"></script>
+<script src="assets/leaflet/leaflet.markercluster.js"></script>
+<script>
+/* ===== 数据：大连主要景点（31 个，含网络口碑综合推荐星级，满分 5 星） =====
+   kind: free=免费 / paid=收费 / reserve=免费但需预约 */
+const SPOTS = [
+  /* ---- 市区 · 滨海 ---- */
+  {id:1,  group:"city",     tag:"地标", name:"星海广场",          lat:38.8813660, lon:121.5830233, kind:"free", rating:4.6,
+   ticket:"免费",
+   transport:"地铁 1 号线 · 星海广场站",
+   desc:"大连最具代表性的城市广场，面向星海湾与跨海大桥，可喂海鸥、看夜景。"},
+  {id:2,  group:"city",     tag:"公园", name:"星海公园",          lat:38.8769253, lon:121.5637342, kind:"free", rating:4.2,
+   ticket:"免费",
+   transport:"地铁 1 号线 · 星海广场站向西步行",
+   desc:"老牌海滨公园，沙滩与礁石并存，与圣亚海洋世界相连，适合散步吹海风。"},
+  {id:3,  group:"city",     tag:"主题馆", name:"圣亚海洋世界",     lat:38.8791465, lon:121.5673809, kind:"paid", rating:4.3,
+   ticket:"门票约 220 元（五馆联票，线上购票更划算）",
+   transport:"地铁 1 号线 · 大医二院站",
+   desc:"集海洋动物展示与表演于一体，白鲸、海豚、海底隧道是招牌看点。"},
+  {id:4,  group:"city",     tag:"动物园", name:"大连森林动物园",   lat:38.8750123, lon:121.6119208, kind:"paid", rating:4.6,
+   ticket:"门票约 120 元（圈养区 + 散养区）",
+   transport:"公交或打车（白云山风景区内）",
+   desc:"东北地区最大的森林动物园，圈养区看大熊猫、东北虎，散养区可近距离接触长颈鹿、斑马。"},
+  {id:5,  group:"city",     tag:"海滨", name:"付家庄公园",        lat:38.8652430, lon:121.6235330, kind:"free", rating:4.2,
+   ticket:"免费（海滨浴场）",
+   transport:"公交（滨海西路）或打车",
+   desc:"大连四大海水浴场之一，鹅卵石沙滩、水质清澈，本地人夏季最爱。"},
+  {id:6,  group:"city",     tag:"主题公园", name:"老虎滩海洋公园", lat:38.8729816, lon:121.6734492, kind:"paid", rating:4.4,
+   ticket:"门票约 220 元（极地馆、珊瑚馆、鸟语林等五馆，学生半价）",
+   transport:"公交（虎滩路）或打车",
+   desc:"大连老牌海洋公园，极地馆的白鲸企鹅、珊瑚馆的海底世界最受欢迎，建议预留半天。"},
+  {id:7,  group:"city",     tag:"街区", name:"渔人码头",          lat:38.8767046, lon:121.6814187, kind:"free", rating:4.3,
+   ticket:"免费",
+   transport:"紧邻老虎滩，可步行或打车",
+   desc:"彩色渔船、灯塔与欧式建筑组成的滨海街区，傍晚拍照与吃海鲜的好去处。"},
+  {id:8,  group:"city",     tag:"海滨", name:"棒棰岛",            lat:38.8842373, lon:121.7140712, kind:"paid", rating:4.6,
+   ticket:"门票 20 元（观光车往返约 40 元）",
+   transport:"无地铁直达，建议打车",
+   desc:"棒槌形小岛与清澈海湾构成的海滨风景区，水清沙细，是国宾馆所在地。"},
+  {id:9,  group:"city",     tag:"街区", name:"东港 · 东方水城",   lat:38.9243368, lon:121.6842500, kind:"free", rating:4.4,
+   ticket:"免费（可乘贡多拉游船）",
+   transport:"地铁 2 号线 · 东港站附近，或公交",
+   desc:"威尼斯风格的水城街区，运河、尖顶建筑与音乐喷泉，夜景尤佳。"},
+  {id:10, group:"city",     tag:"公园", name:"海之韵公园",        lat:38.9118874, lon:121.6946276, kind:"free", rating:4.1,
+   ticket:"免费",
+   transport:"公交或打车（滨海路东段）",
+   desc:"东海公园，滨海路起点附近的观海胜地，可远眺棒棰岛与黄海。"},
+  {id:11, group:"city",     tag:"海滨", name:"银沙滩",            lat:38.8688577, lon:121.6098463, kind:"free", rating:4.6,
+   ticket:"免费（停车 10 元）",
+   transport:"公交 5 路 · 银沙滩站（西岗区滨海西路）",
+   desc:"藏在滨海西路的“小镰仓”，礁石、木栈道、通往大海的小路，随手拍都出片。"},
+  {id:12, group:"city",     tag:"栈桥", name:"星月栈桥",          lat:38.8742810, lon:121.5986180, kind:"free", rating:4.8,
+   ticket:"免费（星海新天地东侧海上栈桥）",
+   transport:"公交 49 路 · 森林动物园南门站步行，或从星海广场沿海边栈道",
+   desc:"2025 年开放的海上红桥，全长 156 米，镂空桥面可“海上踏浪”，落日与夜景极美，大连新晋地标。"},
+  {id:13, group:"city",     tag:"观景", name:"跨海大桥 · 观景",   lat:38.8672943, lon:121.5736487, kind:"free", rating:4.6,
+   ticket:"免费（桥面不可停车）",
+   transport:"导航“星海湾大桥最佳观景点”（西尖山公园旁）或从银沙滩步行",
+   desc:"全长近 6 公里的星海湾跨海大桥，日落与夜间亮灯时极为壮观，观景机位出片。"},
+  {id:14, group:"city",     tag:"风景区", name:"燕窝岭风景区",    lat:38.8656640, lon:121.6500950, kind:"free", rating:4.6,
+   ticket:"免费（停车 10 元）",
+   transport:"公交 801 路 · 北大桥站步行，或打车（滨海路中段）",
+   desc:"山与海交汇的婚庆主题公园，崖壁观海、民俗雕塑与林间小径，可东望老虎滩、西观傅家庄。"},
+  {id:15, group:"city",     tag:"观景", name:"菱角湾",            lat:38.8656259, lon:121.6668339, kind:"free", rating:4.7,
+   ticket:"免费",
+   transport:"地铁 5 号线 · 虎滩公园站步行约 20 分钟，或公交（老虎滩西侧）",
+   desc:"原生态礁石海岸，“大连小圣托里尼”，长焦拍渔人码头全景与跨海大桥日落是经典机位。"},
+  {id:16, group:"city",     tag:"街景", name:"港东五街",          lat:38.9185332, lon:121.6870302, kind:"free", rating:4.5,
+   ticket:"免费",
+   transport:"公交或打车（大连港东侧，东港商务区）",
+   desc:"笔直街道直通大海，巨型货轮从街尽头缓缓驶过，科幻感十足的观船机位。"},
+  {id:17, group:"city",     tag:"海滨", name:"石槽村",            lat:38.8670713, lon:121.6926555, kind:"free", rating:4.7,
+   ticket:"免费（停车 10 元，部分营地收费）",
+   transport:"公交或打车（滨海东路，老虎滩与棒棰岛之间）",
+   desc:"原生态小渔村，礁石悬崖配“玻璃海”，本地人私藏看海地，《风声》取景地，可露营徒步。"},
+  {id:18, group:"city",     tag:"博物馆", name:"大连博物馆",      lat:38.8873947, lon:121.5811823, kind:"free", rating:4.6,
+   ticket:"免费 · 免预约（凭身份证入馆，周一闭馆）",
+   transport:"地铁 1 号线 · 会展中心站步行（星海广场北侧）",
+   desc:"国家一级博物馆，1.6 万件文物讲述大连百年开埠史，近代大连展厅是精华。"},
+  {id:19, group:"city",     tag:"公园", name:"富国公园",          lat:38.8907146, lon:121.5700713, kind:"free", rating:4.5,
+   ticket:"免费",
+   transport:"地铁 1 号线 · 富国街站附近步行上山",
+   desc:"整座公园就是一座山，约 20 分钟登顶可 360° 俯瞰大连市区，城市夜景的网红机位。"},
+  {id:20, group:"city",     tag:"博物馆", name:"大连自然博物馆",  lat:38.8695120, lon:121.5565455, kind:"reserve", rating:4.6,
+   ticket:"免费 · 需提前在公众号 / 美团预约（周一闭馆）",
+   transport:"地铁 1 号线 · 黑石礁站",
+   desc:"黑石礁海滨的博物馆，巨型鲸鱼标本与恐龙骨架是镇馆之宝，带娃必去。"},
+  /* ---- 老城 · 街区 ---- */
+  {id:21, group:"oldcity",  tag:"广场", name:"中山广场",          lat:38.9207318, lon:121.6388125, kind:"free", rating:4.3,
+   ticket:"免费",
+   transport:"地铁 2 号线 · 中山广场站",
+   desc:"十条马路汇聚的环形广场，四周环绕日俄时期欧式建筑群，适合漫步拍照。"},
+  {id:22, group:"oldcity",  tag:"街区", name:"俄罗斯风情街",      lat:38.9269682, lon:121.6307135, kind:"free", rating:4.2,
+   ticket:"免费",
+   transport:"地铁 2 号线 · 大连站附近步行",
+   desc:"百年历史的俄式建筑街区，保留了原达里尼市政厅等老建筑，文创小店与纪念品集中。"},
+  {id:23, group:"oldcity",  tag:"历史街区", name:"东关街",        lat:38.9196641, lon:121.6168779, kind:"free", rating:4.7,
+   ticket:"免费（09:00-21:00 开放）",
+   transport:"地铁 2 号线 · 人民广场站步行，或 201 路有轨电车直达",
+   desc:"百年“华商第一街”，2024 年修缮重生，42 栋历史建筑 + 新潮小店，坐复古电车穿街是招牌体验。"},
+  {id:24, group:"oldcity",  tag:"街区", name:"熊洞街",            lat:38.9407182, lon:121.5795324, kind:"free", rating:4.7,
+   ticket:"免费进入 · 游乐项目单独收费（机械熊表演免费）",
+   transport:"地铁 2 号线 · 辽师大站附近，或打车（冰山慧谷产业园）",
+   desc:"旧厂区改造的赛博朋克街区，6 米高机械巨熊“北北”巡游震撼出片，遛娃与打卡两相宜。"},
+  /* ---- 旅顺 ---- */
+  {id:25, group:"lvshun",   tag:"博物馆", name:"旅顺博物馆",      lat:38.8075223, lon:121.2295795, kind:"reserve", rating:4.6,
+   ticket:"免费 · 需提前在公众号 / 美团预约（周一闭馆）",
+   transport:"地铁 12 号线旅顺站转乘，或旅顺公交",
+   desc:"百年园林式博物馆，馆藏青铜器、书画与新疆文物，建筑本身也是看点。"},
+  {id:26, group:"lvshun",   tag:"景区", name:"白玉山景区",        lat:38.8106252, lon:121.2517021, kind:"paid", rating:4.4,
+   ticket:"门票 40 元（含缆车另计）",
+   transport:"旅顺城区，公交或打车",
+   desc:"登白玉山塔可俯瞰旅顺口全景与军港，是看旅顺地理格局的最佳位置。"},
+  {id:27, group:"lvshun",   tag:"军港", name:"旅顺军港（军港游园）", lat:38.8033643, lon:121.2537816, kind:"paid", rating:3.7,
+   ticket:"游园门票约 30 元（远眺免费）",
+   transport:"旅顺城区，公交或打车",
+   desc:"中国近代海军的发源地之一，可远眺军港内舰艇与口门，“老虎尾”沙滩地貌独特。"},
+  {id:28, group:"lvshun",   tag:"博物馆", name:"旅顺日俄监狱旧址", lat:38.8245804, lon:121.2599376, kind:"reserve", rating:4.6,
+   ticket:"免费 · 需实名预约",
+   transport:"旅顺城区，公交或打车",
+   desc:"近代监狱旧址博物馆，保存完整的牢房、刑讯室与墓地，是一段沉重的历史现场。"},
+  /* ---- 金石滩 ---- */
+  {id:29, group:"jinshitan", tag:"地质公园", name:"金石滩国家地质公园", lat:39.0611344, lon:122.0590125, kind:"paid", rating:4.6,
+   ticket:"门票 60 元（旺季）/ 40 元（淡季），可加购区内交通",
+   transport:"地铁 3 号线 · 金石滩站，转区内交通或打车",
+   desc:"海蚀地貌奇观集中地，“恐龙探海”“龟裂石”等六亿年地质遗迹，沿海岸线徒步约 2 小时。"},
+  {id:30, group:"jinshitan", tag:"主题公园", name:"发现王国主题公园", lat:39.0804404, lon:121.9966431, kind:"paid", rating:4.5,
+   ticket:"日场约 260 元 / 夜场约 200 元（提前线上购票有优惠）",
+   transport:"地铁 3 号线 · 金石滩站",
+   desc:"大型主题乐园，过山车、跳楼机等游乐设施齐全，晚间有花车巡游与演出。"},
+  {id:31, group:"jinshitan", tag:"海滨", name:"黄金海岸",        lat:39.0758830, lon:122.0031230, kind:"free", rating:4.2,
+   ticket:"免费（沙滩与海上项目另收费）",
+   transport:"地铁 3 号线 · 金石滩站，步行或区内交通",
+   desc:"十里金色沙滩，沙质金黄滩软沙平，夏季游泳、帆船与摩托艇等海上项目集中地。"}
+];
+
+const GROUPS = [
+  {key:"city",     num:"一", label:"市区 · 滨海", meta:"20 个点位"},
+  {key:"oldcity",  num:"二", label:"老城 · 街区", meta:"4 个点位"},
+  {key:"lvshun",   num:"三", label:"旅顺",       meta:"4 个点位"},
+  {key:"jinshitan",num:"四", label:"金石滩",     meta:"3 个点位"}
+];
+
+/* ===== 地图初始化 ===== */
+const AMAP_KEY = "82994096bb9c68f69fa9c5f72a39c3ef";
+const map = L.map("map", {zoomControl:false, scrollWheelZoom:true, maxZoom:18});
+L.control.zoom({position:"topright"}).addTo(map);
+const providers = [
+  {url:"https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}&key="+AMAP_KEY,
+   opts:{attribution:'&copy; <a href="https://www.amap.com/" target="_blank" rel="noopener">高德地图</a>', subdomains:["1","2","3","4"], maxZoom:18, maxNativeZoom:18}},
+  {url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+   opts:{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors', maxZoom:19, maxNativeZoom:19}},
+  {url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+   opts:{attribution:'&copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>', maxZoom:19, maxNativeZoom:13}}
+];
+let tileIdx = 0;
+let tileErrors = 0;
+let tiles = L.tileLayer(providers[0].url, providers[0].opts).addTo(map);
+tiles.on("tileerror", function(){
+  tileErrors += 1;
+  if(tileIdx >= providers.length - 1 || tileErrors < 3) return;
+  tileIdx += 1;
+  tileErrors = 0;
+  map.removeLayer(tiles);
+  tiles = L.tileLayer(providers[tileIdx].url, providers[tileIdx].opts).addTo(map);
+});
+map.setView([38.92, 121.65], 11);
+
+/* ===== 点位图层（聚合） ===== */
+const markerLayer = L.markerClusterGroup({maxClusterRadius:64, spiderfyOnMaxZoom:true, showCoverageOnHover:false}).addTo(map);
+const markerMap = {};
+SPOTS.forEach(function(s){
+  const icon = L.divIcon({
+    className:"", html:'<div class="pin '+s.kind+'"><span>'+s.id+'</span></div>',
+    iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-32]
+  });
+  const m = L.marker([s.lat, s.lon], {icon:icon, title:s.name}).addTo(markerLayer);
+  m.bindPopup(popupHtml(s), {className:"spot-popup", minWidth:250, maxWidth:300, closeButton:true});
+  m.on("click", function(){ highlightCard(s.id); });
+  markerMap[s.id] = m;
+});
+
+function popupHtml(s){
+  return '<div class="pp-head">'
+    + '<span class="pp-num">'+s.id+'</span><span class="pp-name">'+s.name+'</span>'
+    + '<span class="pp-rating">'+starsHtml(s.rating)+'</span>'
+    + '<span class="pp-tag '+s.kind+'">'+kindLabel(s.kind)+'</span></div>'
+    + '<div class="pp-ticket '+s.kind+'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9V5h18v4a2 2 0 000 6v4H3v-4a2 2 0 000-6z"/><path d="M13 6v12"/></svg>&nbsp;'+s.ticket+'</div>'
+    + '<div class="pp-transport"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></svg>&nbsp;'+s.transport+'</div>'
+    + '<div class="pp-desc">'+s.desc+'</div>';
+}
+
+function starsHtml(r){
+  const full = Math.round(r);
+  let s = "";
+  for(let i = 0; i < full; i++){ s += "★"; }
+  for(let i = full; i < 5; i++){ s += "☆"; }
+  return s + " " + r.toFixed(1);
+}
+
+function kindLabel(k){
+  return k==="free" ? "免费" : (k==="paid" ? "收费" : "免费 · 需预约");
+}
+
+/* ===== 景点清单渲染 ===== */
+const planEl = document.getElementById("plan");
+GROUPS.forEach(function(g){
+  const block = document.createElement("div");
+  block.className = "group-block";
+  block.dataset.group = g.key;
+  let html = '<div class="group-title"><span class="gnum">'+g.num+'</span>'
+    + '<span class="glabel">'+g.label+'</span><span class="gmeta">'+g.meta+'</span></div>';
+  SPOTS.filter(function(s){return s.group===g.key;}).forEach(function(s){
+    html += '<div class="card '+s.kind+'" data-id="'+s.id+'" tabindex="0" role="button" aria-label="定位 '+s.name+'">'
+      + '<div class="card-head"><span class="cnum">'+s.id+'</span><span class="cname">'+s.name+'</span><span class="crating">'+starsHtml(s.rating)+'</span><span class="ctime">'+s.tag+'</span></div>'
+      + '<div class="cticket '+s.kind+'">'+s.ticket+'</div>'
+      + '<div class="ctransport">'+s.transport+'</div>'
+      + '<div class="cdesc">'+s.desc+'</div>'
+      + '<div class="cmap">定位到地图 →</div></div>';
+  });
+  block.innerHTML = html;
+  planEl.appendChild(block);
+});
+
+planEl.addEventListener("click", function(e){
+  const card = e.target.closest(".card[data-id]");
+  if(!card) return;
+  const id = Number(card.dataset.id);
+  const m = markerMap[id];
+  if(!m) return;
+  map.flyTo(m.getLatLng(), 15, {duration:.8});
+  setTimeout(function(){ m.openPopup(); }, 900);
+  highlightCard(id);
+});
+
+function highlightCard(id){
+  document.querySelectorAll(".card[data-id]").forEach(function(c){
+    c.classList.toggle("active", Number(c.dataset.id)===id);
+  });
+}
+
+/* ===== 按区域筛选 ===== */
+function applyFilter(group){
+  const bounds = [];
+  SPOTS.forEach(function(s){
+    const show = group==="all" || s.group===group;
+    if(show){
+      if(!markerLayer.hasLayer(markerMap[s.id])) markerLayer.addLayer(markerMap[s.id]);
+      bounds.push([s.lat, s.lon]);
+    }else{
+      if(markerLayer.hasLayer(markerMap[s.id])) markerLayer.removeLayer(markerMap[s.id]);
+    }
+  });
+  document.querySelectorAll(".card").forEach(function(c){
+    const id = Number(c.dataset.id);
+    c.style.display = (group==="all" || SPOTS[id-1].group===group) ? "" : "none";
+  });
+  document.querySelectorAll(".group-block").forEach(function(b){
+    b.style.display = (group==="all" || b.dataset.group===group) ? "" : "none";
+  });
+  document.querySelectorAll(".card.active").forEach(function(c){c.classList.remove("active");});
+  if(bounds.length){ map.fitBounds(bounds, {padding:[40,40], maxZoom:13}); }
+}
+document.querySelectorAll(".fbtn").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll(".fbtn").forEach(function(b){b.classList.remove("active");});
+    btn.classList.add("active");
+    applyFilter(btn.dataset.group);
+  });
+});
+
+/* 初始视野 */
+applyFilter("all");
+</script>
+</body>
+</html>

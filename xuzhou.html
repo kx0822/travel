@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>徐州 · 两日游行程地图</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%233F6B57'/%3E%3Ctext x='32' y='42' font-size='28' text-anchor='middle' fill='%23F6F0E3' font-family='serif'%3E徐%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css">
+<link rel="stylesheet" href="assets/leaflet/MarkerCluster.css">
+<link rel="stylesheet" href="assets/leaflet/MarkerCluster.Default.css">
+<style>
+/* ===== Token ===== */
+:root{
+  --paper:#F6F0E3; --paper2:#EDE4CF; --ink:#2A271F; --sub:#6F6755;
+  --line:#DCD2BC; --d1:#B0493A; --d2:#3F6B57; --gold:#A9843C; --dark:#22201A;
+  --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --shadow:0 10px 30px rgba(42,39,31,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.6}
+::selection{background:rgba(63,107,87,.22)}
+:focus-visible{outline:2px solid var(--d2);outline-offset:2px}
+
+/* ===== Header ===== */
+.site-header{position:sticky;top:0;z-index:600;background:rgba(246,240,227,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.header-in{max-width:1440px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-weight:700;font-size:19px;letter-spacing:.04em}
+.brand .seal{width:34px;height:34px;border-radius:8px;background:var(--d2);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:17px}
+.filter{display:flex;gap:8px;margin-left:auto}
+.fbtn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:500 13px/1 var(--sans);padding:7px 14px;border-radius:999px;cursor:pointer;transition:all .18s}
+.fbtn:hover{border-color:var(--d2);color:var(--d2)}
+.fbtn.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* ===== Hero ===== */
+.hero{max-width:1440px;margin:0 auto;padding:44px 22px 26px;text-align:center;position:relative}
+.hero .cloud{width:74px;height:22px;margin:0 auto 14px;opacity:.8}
+.hero h1{font-family:var(--serif);font-weight:900;font-size:clamp(34px,5vw,58px);letter-spacing:.12em}
+.hero h1 em{font-style:normal;color:var(--d1)}
+.hero .sub{margin-top:12px;color:var(--sub);font-size:15px;letter-spacing:.06em}
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.chip{border:1px solid var(--line);background:var(--paper2);border-radius:999px;padding:6px 16px;font-size:13px;color:var(--ink)}
+.chip b{font-weight:700;color:var(--d2)}
+.chip.hl b{color:var(--d1)}
+
+/* ===== Layout ===== */
+.layout{max-width:1440px;margin:0 auto;padding:10px 22px 0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,1fr);gap:22px;align-items:start}
+.map-col{position:sticky;top:66px;height:calc(100vh - 86px);min-height:520px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)}
+#map{width:100%;height:100%;background:#E8E2D3}
+.map-title{position:absolute;top:12px;left:12px;z-index:500;background:rgba(246,240,227,.95);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-family:var(--serif);font-weight:700;font-size:14px;letter-spacing:.05em;box-shadow:0 4px 12px rgba(42,39,31,.12)}
+.map-hint{position:absolute;bottom:34px;right:12px;z-index:500;background:rgba(246,240,227,.95);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--sub)}
+.map-legend{position:absolute;bottom:12px;left:12px;z-index:500;background:rgba(246,240,227,.95);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:12px;color:var(--ink);display:flex;gap:14px;box-shadow:0 4px 12px rgba(42,39,31,.12)}
+.map-legend span{display:flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.dot.d1{background:var(--d1)} .dot.d2{background:var(--d2)} .dot.gold{background:var(--gold)}
+
+/* ===== 聚合 ===== */
+.marker-cluster{background-clip:padding-box;border-radius:20px}
+.marker-cluster div{width:30px;height:30px;margin-left:5px;margin-top:5px;text-align:center;border-radius:50%;background:var(--ink);color:var(--paper);font:700 13px/30px var(--sans);border:2px solid rgba(255,255,255,.9);box-shadow:0 2px 6px rgba(42,39,31,.3)}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:var(--gold)}
+
+/* ===== Leaflet overrides ===== */
+.leaflet-container{font-family:var(--sans)}
+.leaflet-control-zoom a{color:var(--ink)!important}
+.spot-popup .leaflet-popup-content-wrapper{border-radius:12px;background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow)}
+.spot-popup .leaflet-popup-content{margin:14px 16px;line-height:1.6}
+.spot-popup .leaflet-popup-tip{background:var(--paper);border:1px solid var(--line)}
+.pp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.pp-name{font-family:var(--serif);font-weight:700;font-size:17px}
+.pp-tag{font-size:11px;padding:2px 9px;border-radius:999px;color:#fff}
+.pp-tag.d1{background:var(--d1)} .pp-tag.d2{background:var(--d2)} .pp-tag.gold{background:var(--gold)}
+.pp-transport{font-size:12.5px;color:var(--d2);margin-bottom:6px;display:flex;gap:6px;align-items:flex-start}
+.pp-desc{font-size:13px;color:var(--sub)}
+.pp-num{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:11px;font-weight:700;margin-right:2px}
+
+/* ===== Pin markers ===== */
+.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(42,39,31,.35);border:2px solid rgba(255,255,255,.85)}
+.pin.d1{background:var(--d1)} .pin.d2{background:var(--d2)} .pin.gold{background:var(--gold)} .pin.dark{background:var(--ink)}
+.pin span{transform:rotate(45deg);color:#fff;font:700 13px/1 var(--sans)}
+.pin:hover{transform:rotate(-45deg) scale(1.08)}
+.pin.active{outline:3px solid var(--gold);outline-offset:2px}
+
+/* ===== Plan column ===== */
+.plan-col{min-width:0}
+.plan-head{display:flex;align-items:baseline;gap:12px;margin:6px 0 4px}
+.plan-head h2{font-family:var(--serif);font-weight:700;font-size:22px;letter-spacing:.06em}
+.plan-head p{font-size:12.5px;color:var(--sub)}
+.day-block{margin-top:18px}
+.day-title{display:flex;align-items:center;gap:12px;padding-bottom:8px;border-bottom:2px solid var(--ink);margin-bottom:4px}
+.day-title .dnum{font-family:var(--serif);font-weight:900;font-size:20px}
+.day-title .dnum.d1{color:var(--d1)} .day-title .dnum.d2{color:var(--d2)}
+.day-title .dlabel{font-family:var(--serif);font-weight:700;font-size:16px}
+.day-title .dmeta{margin-left:auto;font-size:12.5px;color:var(--sub)}
+.slot{margin-top:10px}
+.slot-name{font-size:12px;font-weight:700;letter-spacing:.22em;color:var(--sub);display:flex;align-items:center;gap:8px;margin:12px 0 6px}
+.slot-name::after{content:"";flex:1;height:1px;background:var(--line)}
+.card{background:var(--paper2);border:1px solid var(--line);border-left:4px solid var(--d2);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:all .18s}
+.card.d1{border-left-color:var(--d1)}
+.card.gold{border-left-color:var(--gold)}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.card.active{outline:2px solid var(--gold);outline-offset:1px;background:#FBF6EA}
+.card-head{display:flex;align-items:center;gap:8px}
+.card-head .cnum{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:12px;font-weight:700}
+.card-head .cname{font-family:var(--serif);font-weight:700;font-size:15.5px}
+.card-head .ctime{margin-left:auto;font-size:12px;color:var(--sub);white-space:nowrap}
+.card .ctransport{font-size:12.5px;color:var(--d2);margin:5px 0 3px}
+.card .cdesc{font-size:13px;color:var(--sub)}
+.card .cmap{margin-top:8px;font-size:12px;color:var(--gold);font-weight:700}
+.card.note{opacity:.75;cursor:default;border-left-color:var(--line)}
+.card.note:hover{transform:none;box-shadow:none}
+
+/* ===== Footer ===== */
+footer{max-width:1440px;margin:30px auto 0;padding:20px 22px 34px;border-top:1px solid var(--line);color:var(--sub);font-size:12px;text-align:center}
+footer a{color:var(--d2)}
+
+@media (max-width:960px){
+  .layout{grid-template-columns:1fr}
+  .map-col{position:sticky;top:60px;height:58vh;min-height:420px}
+}
+@media (max-width:520px){
+  .header-in{padding:8px 14px}
+  .brand{font-size:16px}
+  .filter{width:100%;justify-content:flex-start;order:3}
+  .hero{padding:30px 14px 18px}
+  .map-col{top:108px;height:52vh}
+  .map-hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-in">
+    <div class="brand"><span class="seal">徐</span>徐州 · 两日行</div>
+    <div class="filter" role="group" aria-label="按天筛选">
+      <button class="fbtn active" data-day="all">全部</button>
+      <button class="fbtn" data-day="1">第 1 天 · 9.25</button>
+      <button class="fbtn" data-day="2">第 2 天 · 9.26</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <svg class="cloud" viewBox="0 0 74 22" aria-hidden="true"><path d="M4 16h66M14 12h46M24 8h26M32 4h10" stroke="#A9843C" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+  <h1>彭城寻汉 · <em>两日行记</em></h1>
+  <p class="sub">从汉墓汉俑到湖光夜演，一条地铁与打车串联的徐州双日路线</p>
+  <div class="chips">
+    <span class="chip"><b>9.25 – 9.26</b> 出行</span>
+    <span class="chip"><b>14</b> 个点位 · 地图可点</span>
+    <span class="chip hl"><b>两汉文化</b> + <b>云龙夜演</b></span>
+    <span class="chip"><b>地铁 2/3 号线</b> + 打车</span>
+  </div>
+</section>
+
+<main class="layout">
+  <aside class="map-col">
+    <div class="map-title">徐州 · 行程地图</div>
+    <div id="map"></div>
+    <div class="map-hint">点击地图上的编号点位，查看景点详情</div>
+    <div class="map-legend">
+      <span><i class="dot d1"></i>第 1 天</span>
+      <span><i class="dot d2"></i>第 2 天</span>
+      <span><i class="dot gold"></i>住宿 / 交通</span>
+    </div>
+  </aside>
+
+  <section class="plan-col">
+    <div class="plan-head"><h2>行程总览</h2><p>点击卡片可在地图上定位；点击地图点位查看详情</p></div>
+    <div id="plan"></div>
+  </section>
+</main>
+
+<footer>
+  <p>行程内容来自《徐州.xlsx》行程表；景点坐标为 OpenStreetMap / 公开地图数据，仅供参考。<br>
+  地图底图 © <a href="https://www.amap.com/" target="_blank" rel="noopener">高德地图</a>（已配置 key，最大 18 级清晰显示）；备用源 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · © <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>，联网加载、自动切换。</p>
+</footer>
+
+<script src="assets/leaflet/leaflet.js"></script>
+<script src="assets/leaflet/leaflet.markercluster.js"></script>
+<script>
+/* ===== 数据：来自徐州.xlsx 行程表 ===== */
+const SPOTS = [
+  {id:1,  day:1, slot:"上午", tag:"景点", name:"龟山汉墓",        lat:34.3083151, lon:117.1323837, kind:"d1",
+   transport:"距彭城饭店约 10 公里，建议打车前往",
+   desc:"西汉楚王崖洞墓，墓室结构宏大、凿工精湛，有“中华一绝”之称；景区内还有圣旨博物馆。"},
+  {id:2,  day:1, slot:"下午", tag:"景点", name:"徐州博物馆",      lat:34.2519388, lon:117.1805905, kind:"d1",
+   transport:"地铁 2 号线 · 师大云龙校区站",
+   desc:"国家一级博物馆，汉代文物收藏居全国前列，金缕玉衣、汉画像石、汉代玉器是馆藏精华。"},
+  {id:3,  day:1, slot:"下午", tag:"景点", name:"乾隆行宫",        lat:34.2513838, lon:117.1807529, kind:"d1",
+   transport:"地铁 2 号线 · 师大云龙校区站（紧邻徐州博物馆）",
+   desc:"清乾隆南巡驻跸的行宫建筑群，是徐州保存较完整的清代官式建筑，与博物馆一路之隔。"},
+  {id:4,  day:1, slot:"下午", tag:"景点", name:"云龙湖",          lat:34.2386636, lon:117.1572272, kind:"d1",
+   transport:"地铁 2 号线 · 师大云龙校区站，向西步行即达湖东岸",
+   desc:"国家 5A 级旅游景区，湖光山色、十里杏花，环湖骑行或漫步皆宜，是徐州的“城市会客厅”。"},
+  {id:5,  day:1, slot:"晚上", tag:"晚餐", name:"赵董睢宁菜",      lat:34.2177220, lon:117.1950230, kind:"d1",
+   transport:"地铁 3 号线 · 南三环路站 1 号口出（老矿大店）",
+   desc:"睢宁风味土菜馆，蛋花桂鱼、小尾白羊、山林土公鸡等睢宁地方菜，明档点菜、环境大气。"},
+  {id:6,  day:1, slot:"晚上", tag:"夜演", name:"彭城风华",        lat:34.2309570, lon:117.1669380, kind:"d1",
+   transport:"距赵董睢宁菜约 5.2 公里，打车前往 · 20:10 场，建议提前 30 分钟到",
+   desc:"云龙湖大型湖岛水上实景演出，以苏轼知徐故事为主线，乘船观演约 80 分钟（金山公园旁）。"},
+  {id:7,  day:2, slot:"起点", tag:"住宿", name:"彭城饭店",        lat:34.2645105, lon:117.1827583, kind:"gold",
+   transport:"市中心彭城路一带，两日行程均由酒店出发",
+   desc:"本次行程入住酒店，步行可达两来风与回龙窝，到各景点交通便利。"},
+  {id:8,  day:2, slot:"早餐", tag:"美食", name:"两来风",          lat:34.2610930, lon:117.1847560, kind:"d2",
+   transport:"距彭城饭店步行约 672 米 / 11 分钟（文亭街总店）",
+   desc:"中华老字号早餐店，招牌鳝鱼辣汤配牛肉煎包、锅贴，是徐州早餐的代表，本地人从小吃到大。"},
+  {id:9,  day:2, slot:"上午", tag:"街区", name:"回龙窝历史街区",  lat:34.2604186, lon:117.1844692, kind:"d2",
+   transport:"地铁 2 号线 · 户部山站",
+   desc:"明清风格历史文化街区，青砖黛瓦、小巷纵横，聚集文创小店、咖啡馆与徐州小吃。"},
+  {id:10, day:2, slot:"上午", tag:"古迹", name:"户部山",          lat:34.2578297, lon:117.1824802, kind:"d2",
+   transport:"地铁 2 号线 · 户部山站",
+   desc:"徐州老城制高点，明清时期官宦商贾聚居之地，保留大量古民居院落（郑家大院等）。"},
+  {id:11, day:2, slot:"上午", tag:"古迹", name:"戏马台",          lat:34.2564486, lon:117.1841618, kind:"d2",
+   transport:"地铁 2 号线 · 户部山站（户部山上）",
+   desc:"相传为项羽“戏马”遗址，徐州现存最早的名胜之一，登台可俯瞰户部山街区。"},
+  {id:12, day:2, slot:"下午", tag:"景区", name:"汉文化景区",      lat:34.2470830, lon:117.2212120, kind:"d2",
+   transport:"距户部山约 3 公里，打车前往（兵马俑路 1 号）",
+   desc:"国家 4A 级景区，以狮子山楚王陵、汉兵马俑博物馆为核心，集“两汉三绝”——汉墓、汉俑、汉画像石于一体。"},
+  {id:13, day:2, slot:"下午", tag:"寺院", name:"宝莲寺",          lat:34.2962753, lon:117.2629158, kind:"d2",
+   transport:"距汉文化景区约 7.7 公里，打车约 13 分钟",
+   desc:"徐州著名古刹，始建于南朝，历经兴废，今为大规模重建的佛教文化景区，殿宇恢弘。"},
+  {id:14, day:2, slot:"返程", tag:"车站", name:"徐州东站",        lat:34.2695842, lon:117.3018395, kind:"gold",
+   transport:"距宝莲寺约 6.8 公里，打车约 15 分钟 · 20:17 发车",
+   desc:"京沪高铁枢纽车站，行程在此结束，建议提前至少 1 小时到站取票进站。"}
+];
+
+const DAYS = [
+  {day:1, label:"第一天", date:"9 月 25 日 · 周四", slots:["上午","下午","晚上"]},
+  {day:2, label:"第二天", date:"9 月 26 日 · 周五", slots:["早餐","上午","午餐","下午","返程"]}
+];
+const LUNCH_NOTE = {slot:"午餐", name:"徐州烧烤（待定）", note:"行程备注“烧烤？”。上午逛完户部山、戏马台，可在回龙窝 / 户部山周边解决，徐州烧烤以羊肉串、手擀面为特色。"};
+
+/* ===== 地图初始化 ===== */
+const AMAP_KEY = "82994096bb9c68f69fa9c5f72a39c3ef";
+const map = L.map("map", {zoomControl:false, scrollWheelZoom:true, maxZoom:18});
+L.control.zoom({position:"topright"}).addTo(map);
+const providers = [
+  {url:"https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}&key="+AMAP_KEY,
+   opts:{attribution:'&copy; <a href="https://www.amap.com/" target="_blank" rel="noopener">高德地图</a>', subdomains:["1","2","3","4"], maxZoom:18, maxNativeZoom:18}},
+  {url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+   opts:{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors', maxZoom:19, maxNativeZoom:19}},
+  {url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+   opts:{attribution:'&copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>', maxZoom:19, maxNativeZoom:13}}
+];
+let tileIdx = 0;
+let tileErrors = 0;
+let tiles = L.tileLayer(providers[0].url, providers[0].opts).addTo(map);
+tiles.on("tileerror", function(){
+  tileErrors += 1;
+  if(tileIdx >= providers.length - 1 || tileErrors < 3) return;
+  tileIdx += 1;
+  tileErrors = 0;
+  map.removeLayer(tiles);
+  tiles = L.tileLayer(providers[tileIdx].url, providers[tileIdx].opts).addTo(map);
+});
+map.setView([34.265, 117.205], 12);
+
+/* ===== 点位图层（聚合） ===== */
+const markerLayer = L.markerClusterGroup({maxClusterRadius:64, spiderfyOnMaxZoom:true, showCoverageOnHover:false}).addTo(map);
+const markerMap = {};
+SPOTS.forEach(function(s){
+  const icon = L.divIcon({
+    className:"", html:'<div class="pin '+s.kind+'"><span>'+s.id+'</span></div>',
+    iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-32]
+  });
+  const m = L.marker([s.lat, s.lon], {icon:icon, title:s.name}).addTo(markerLayer);
+  m.bindPopup(popupHtml(s), {className:"spot-popup", minWidth:250, maxWidth:300, closeButton:true});
+  m.on("click", function(){ highlightCard(s.id); });
+  markerMap[s.id] = m;
+});
+
+function popupHtml(s){
+  return '<div class="pp-head">'
+    + '<span class="pp-num">'+s.id+'</span><span class="pp-name">'+s.name+'</span>'
+    + '<span class="pp-tag '+s.kind+'">第 '+s.day+' 天 · '+s.slot+'</span></div>'
+    + '<div class="pp-transport"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></svg>&nbsp;'+s.transport+'</div>'
+    + '<div class="pp-desc">'+s.desc+'</div>';
+}
+
+/* ===== 行程列表渲染 ===== */
+const planEl = document.getElementById("plan");
+DAYS.forEach(function(d){
+  const block = document.createElement("div");
+  block.className = "day-block";
+  block.dataset.day = d.day;
+  let html = '<div class="day-title"><span class="dnum '+(d.day===1?"d1":"d2")+'">'+d.day+'</span>'
+    + '<span class="dlabel">'+d.label+'</span><span class="dmeta">'+d.date+'</span></div>';
+  d.slots.forEach(function(slot){
+    html += '<div class="slot"><div class="slot-name">'+slot+'</div>';
+    if(slot === "午餐"){
+      html += '<div class="card note"><div class="card-head"><span class="cname">'+LUNCH_NOTE.name+'</span><span class="ctime">'+LUNCH_NOTE.slot+'</span></div>'
+        + '<div class="cdesc">'+LUNCH_NOTE.note+'</div></div>';
+    }else{
+      SPOTS.filter(function(s){return s.day===d.day && s.slot===slot;}).forEach(function(s){
+        html += '<div class="card '+s.kind+'" data-id="'+s.id+'" tabindex="0" role="button" aria-label="定位 '+s.name+'">'
+          + '<div class="card-head"><span class="cnum">'+s.id+'</span><span class="cname">'+s.name+'</span><span class="ctime">'+s.tag+'</span></div>'
+          + '<div class="ctransport">'+s.transport+'</div>'
+          + '<div class="cdesc">'+s.desc+'</div>'
+          + '<div class="cmap">定位到地图 →</div></div>';
+      });
+    }
+    html += '</div>';
+  });
+  block.innerHTML = html;
+  planEl.appendChild(block);
+});
+
+planEl.addEventListener("click", function(e){
+  const card = e.target.closest(".card[data-id]");
+  if(!card) return;
+  const id = Number(card.dataset.id);
+  const m = markerMap[id];
+  if(!m) return;
+  map.flyTo(m.getLatLng(), 16, {duration:.8});
+  setTimeout(function(){ m.openPopup(); }, 900);
+  highlightCard(id);
+});
+
+function highlightCard(id){
+  document.querySelectorAll(".card[data-id]").forEach(function(c){
+    c.classList.toggle("active", Number(c.dataset.id)===id);
+  });
+}
+
+/* ===== 按天筛选 ===== */
+let currentDay = "all";
+function applyFilter(day){
+  currentDay = day;
+  const bounds = [];
+  SPOTS.forEach(function(s){
+    const show = day==="all" || s.day===Number(day);
+    if(show){
+      if(!markerLayer.hasLayer(markerMap[s.id])) markerLayer.addLayer(markerMap[s.id]);
+      bounds.push([s.lat, s.lon]);
+    }else{
+      if(markerLayer.hasLayer(markerMap[s.id])) markerLayer.removeLayer(markerMap[s.id]);
+    }
+  });
+  document.querySelectorAll(".card").forEach(function(c){
+    const id = c.dataset.id ? Number(c.dataset.id) : null;
+    c.style.display = (id && (day==="all" || SPOTS[id-1].day===Number(day))) ? "" : (id ? "none" : "");
+  });
+  document.querySelectorAll(".day-block").forEach(function(b){
+    b.style.display = (day==="all" || b.dataset.day===day) ? "" : "none";
+  });
+  document.querySelectorAll(".card.active").forEach(function(c){c.classList.remove("active");});
+  if(bounds.length){ map.fitBounds(bounds, {padding:[40,40], maxZoom:13}); }
+}
+document.querySelectorAll(".fbtn").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll(".fbtn").forEach(function(b){b.classList.remove("active");});
+    btn.classList.add("active");
+    applyFilter(btn.dataset.day);
+  });
+});
+
+/* 初始视野 */
+applyFilter("all");
+</script>
+</body>
+</html>
